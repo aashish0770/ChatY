@@ -11,22 +11,21 @@ export const protectedRoute = [
   requireAuth(),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const { userId: clerkUserId } = getAuth(req);
+      const { userId: clerkId } = getAuth(req);
 
-      if (!clerkUserId) {
+      if (!clerkId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const user = await User.findOne({ clerkUserId });
+      const user = await User.findOne({ clerkId });
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       // Attach the user to the request object for use in subsequent middleware/routes
       req.userId = user.id.toString();
-      next();
     } catch (error) {
-      console.error("Error in protectedRoute middleware:", error);
-      return res.status(500).json({ message: "Internal Server Error" });
+      res.status(500);
+      next(error);
     }
   },
 ];

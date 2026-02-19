@@ -11,7 +11,7 @@ export async function getUser(
   try {
     const userId = req.userId;
 
-    const user = await User.findById(userId).select("-clerkUserId -__v");
+    const user = await User.findById(userId).select("-clerkId -__v");
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -30,25 +30,25 @@ export async function authCallback(
   next: NextFunction,
 ) {
   try {
-    const { userId: clerkUserId } = getAuth(req);
-    if (!clerkUserId) {
+    const { userId: clerkId } = getAuth(req);
+    if (!clerkId) {
       return res
         .status(400)
         .json({ message: "Unauthorized: User ID not found" });
     }
 
-    let user = await User.findOne({ clerkUserId });
+    let user = await User.findOne({ clerkId });
 
     if (!user) {
       // User not found, create a new user
       // get the user from and save in our database
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const clerkUser = await clerkClient.users.getUser(clerkId);
 
       user = await User.create({
-        clerkId: clerkUserId,
+        clerkId,
         name: clerkUser.firstName
           ? `${clerkUser.firstName} ${clerkUser.lastName}`.trim()
-          : clerkUser.emailAddresses[0]?.emailAddress.split("@")[0] || "User",
+          : clerkUser.emailAddresses[0]?.emailAddress?.split("@")[0] || "User",
         email: clerkUser.emailAddresses[0]?.emailAddress || "Unknown",
         avatar: clerkUser.imageUrl,
       });
