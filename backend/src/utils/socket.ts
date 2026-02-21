@@ -5,10 +5,6 @@ import { Chat } from "../models/Chat";
 import { Message } from "../models/Message";
 import { User } from "../models/User";
 
-interface SocketWithAuth extends Socket {
-  userId: string;
-}
-
 // This map will store the mapping of userId to socketId for all online users
 export const onlineUsers: Map<string, string> = new Map();
 
@@ -18,7 +14,7 @@ export const initializeSocket = (server: HttpServer) => {
     "http://localhost:8081",
     process.env.FRONTEND_URL as string,
     process.env.MOBILE_APP_URL as string,
-  ];
+  ].filter(Boolean) as string[];
 
   const io = new SocketServer(server, { cors: { origin: allowedOrigins } });
 
@@ -38,7 +34,7 @@ export const initializeSocket = (server: HttpServer) => {
       if (!user) {
         return next(new Error("Authentication error: User not found"));
       }
-      (socket as SocketWithAuth).userId = user._id.toString();
+      socket.data.userId = user._id.toString();
       next();
     } catch (error: any) {
       console.error("Socket authentication error:", error);
@@ -48,7 +44,7 @@ export const initializeSocket = (server: HttpServer) => {
 
   // this connection handler will be called for each new socket connection
   io.on("connection", (socket) => {
-    const userId = (socket as SocketWithAuth).userId;
+    const userId = socket.data.userId;
 
     //send the list of current online user to the newly connected user
     socket.emit("online-users", { userIds: Array.from(onlineUsers.keys()) });
@@ -98,7 +94,7 @@ export const initializeSocket = (server: HttpServer) => {
           chat.lastMessageAt = new Date();
           await chat.save();
 
-          await message.populate("sender", "name email avatar");
+          await message.populate("sender", "name avatar");
 
           io.to(`chat:${chatId}`).emit("new-message", message);
 
